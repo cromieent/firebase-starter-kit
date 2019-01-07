@@ -1,28 +1,42 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
+import { connect } from 'react-redux';
+import { getTasksThunk, watchTaskAddedEvent, watchTaskRemovedEvent } from './store';
+import { addTaskToFirebase, removeTaskFromFirebase } from './firebase';
+
 import './App.css';
+
+const mapState = state => ({
+  tasks: state
+});
+const mapDispatch = dispatch => {
+  dispatch(getTasksThunk());
+  watchTaskAddedEvent(dispatch);
+  watchTaskRemovedEvent(dispatch);
+  return {};
+}
 
 class App extends Component {
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <div>
+        <div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            addTaskToFirebase(e.target.task.value)
+          }}>
+            <input type="text" name="task" />
+            <input type="submit" name="add task" />
+          </form>
+        </div>
+        <div>
+          <h2> Todo: </h2>
+          <ul>
+            {this.props.tasks.map(item => <li key={item.id}>{item.task}<button onClick={() => removeTaskFromFirebase(item.id)}>x</button></li>)}
+          </ul>
+        </div>
       </div>
-    );
+    )
   }
 }
 
-export default App;
+export default connect(mapState, mapDispatch)(App);
