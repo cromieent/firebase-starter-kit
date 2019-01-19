@@ -3,7 +3,7 @@ import WizardFormFirstPage from './WizardFormFirstPage';
 import WizardFormSecondPage from './WizardFormSecondPage';
 import WizardFormResultsPage from './WizardFormResultsPage';
 
-class WizardForm extends Component {
+export class WizardForm extends Component {
     constructor(props) {
         super(props);
         this.nextPage = this.nextPage.bind(this);

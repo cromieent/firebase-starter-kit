@@ -1,41 +1,47 @@
-import React, { Component } from 'react';
-import { connect } from 'react-redux';
-import { getMembersThunk, watchMemberAddedEvent, watchMemberRemovedEvent } from '../store';
+import { React, Component } from 'react';
+import { connect } from 'react-redux'
+import { Field, reduxForm, formValueSelector } from 'redux-form';
 
+class MemberInfoForm extends Component {
 
-const mapState = state => ({
-    members: state
-});
+    MemberInfoForm = props => {
+        const { fullName,
+            pristine,
+            reset,
+            submitting
+        } = props;
 
-const mapDispatch = dispatch => {
-    dispatch(getMembersThunk());
-    watchMemberAddedEvent(dispatch);
-    watchMemberRemovedEvent(dispatch);
-    return {};
-}
-
-export class Member extends Component {
-
-    render() {
-        const memberList = this.props.memberList.map(member => {
-            if (member.data) {
-                const { id } = member;
-                const { firstname, lastname, created, updated } = member.data();
-                return (
-                    <div key={id}>
-                        <div>{id}</div>
-                        <div>{firstname} {lastname}</div>
-                        <div>Created: {new Date(created.seconds).toString()}</div>
-                        <div>Last Updated: {new Date(updated.seconds).toString()}</div>
-                    </div>
-                );
-            }
-            return <div key="noId">Nothing to see here</div>;
-        });
         return (
-            <div>{memberList}</div>
-        );
-    }
-}
+            <form onSubmit={this.props.showResults}>
+                <div>
+                    <label>Name: </label>
+                    <div>
+                        <Field name="fullName" component="input" type="text" placeholder="Full Name" />
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" disabled={pristine || submitting}>
+                        Submit {fullName}
+                    </button>
+                    <button type="button" disabled={pristine || submitting} onClick={reset}>
+                        Clear Values
+                </button>
+                </div>
+            </form>
+        )
+    };
 
-export default connect(mapState, mapDispatch)(Member);
+    MemberInfoForm = reduxForm({
+        form: 'memberInfo'
+    })(MemberInfoForm);
+
+    selector = formValueSelector('memberInfo');
+
+    MemberInfoForm = connect(state => {
+        const fullName = this.selector(state, 'fullName');
+        return {
+            fullName
+        }
+    })(MemberInfoForm);
+}
+export default MemberInfoForm;

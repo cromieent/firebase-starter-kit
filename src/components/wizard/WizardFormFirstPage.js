@@ -7,7 +7,6 @@ const WizardFormFirstPage = props => {
     const { handleSubmit } = props;
     return (
         <div>
-            <Member />
             <form onSubmit={handleSubmit} className="ui form">
                 <div>
                     <button type="submit" className="next">

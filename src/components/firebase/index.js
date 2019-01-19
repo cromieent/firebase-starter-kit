@@ -1,6 +1,9 @@
 import firebase from 'firebase';
 import uuid from 'uuid/v4';
-
+//ONLY DO OPERATIONS ***TO*** FIREBASE HERE; Query elsewhere
+/**
+ * Initialization information
+ */
 const config = {
     apiKey: "AIzaSyA6MRnU_HjgXBjmrDLD0gRfaikQMQ4bGzc",
     authDomain: "baritracker-75261.firebaseapp.com",
@@ -17,13 +20,15 @@ db.settings({
     timestampsInSnapshots: true
 });
 
-
+/**
+ * Loads all members into memory.  Watch this for the future.
 db.collection("members").get().then((querySnapshot) => {
     querySnapshot.forEach((doc) => {
         const { firstname, lastname } = doc.data();
         console.log(`id=${doc.id}\r\nfirstname=${firstname}\r\nlastname=${lastname}`);
     });
 });
+*/
 
 export const addMemberToFirebase = (member) => {
     if (member) {
@@ -44,5 +49,6 @@ export const addMemberToFirebase = (member) => {
 export const removeMemberFromFirebase = (id) => {
     db.collection("members").doc(`/${id}`).remove();
 }
+
 
 export default db;

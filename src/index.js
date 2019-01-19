@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './components/App';
+import MainForm from './components/memberform/MainForm'
 import * as serviceWorker from './serviceWorker';
-import store from './components/store';
+import store from './components/store/memberInfo';
 import { Provider } from 'react-redux';
 
 ReactDOM.render(<Provider store={store}>
-    <App />
+    <MainForm />
 </Provider>,
     document.getElementById('root')
 );
