@@ -7,6 +7,9 @@ import LoginForm from './loginForm';
 import MemberInfoForm from './member';
 import * as LOV from './support/listOfValues';
 
+//scromie@gmail.com id is 10157022730268035
+
+
 import './App.css';
 
 const mapState = state => ({

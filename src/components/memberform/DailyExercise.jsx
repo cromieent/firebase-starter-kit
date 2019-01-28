@@ -3,7 +3,10 @@ import { Form, Button, Table } from 'semantic-ui-react';
 import Select from 'react-select';
 import { MET_Values } from '../support/MET';
 import { BMR, KCalPerMinute } from '../support/metabolicFormulas';
+import { getAllExercise, updateExercises } from '../firebase';
 import uuid from 'uuid/v4';
+
+//Whoever is looking at this - I know it's bulky right now.  I will refactor!
 
 const initialState = {
     MET_Values,   //MET object - Category{[{name:value},{name:value}]}
@@ -33,7 +36,7 @@ export default class DailyExercise extends Component {
             met_category: '',
             met_activity: '',
             met_activity_name: '',
-            met_value: '0.0',
+            met_value: 0.0,
             bmr: '',
             minutes_spent: '',
             kcal_burned_per_minute: '',
@@ -48,6 +51,7 @@ export default class DailyExercise extends Component {
 
     constructor(props) {
         super(props);
+        initialState.firebaseId = props.values.firebaseId;
         this.state = initialState;
         this.handleSelectCategory = this.handleSelectCategory.bind(this);
         this.handleSelectActivity = this.handleSelectActivity.bind(this);
@@ -60,7 +64,19 @@ export default class DailyExercise extends Component {
         this.reset = this.reset.bind(this);
         this.removeRow = this.removeRow.bind(this);
         this.getGrandTotalKCalBurned = this.getGrandTotalKCalBurned.bind(this);
+        this.handleDBSave = this.handleDBSave.bind(this);
+        this.goGetAllExercise = this.goGetAllExercise.bind(this);
     };
+
+
+    goGetAllExercise = async () => {
+        let result = [];
+        let promise = new Promise((resolve, reject) => {
+            resolve(getAllExercise(this.state.firebaseId));
+        });
+        result = await promise;
+        this.setState({ activityRecord: result });
+    }
 
     getKCalPerMinute = () => {
         const params = {
@@ -111,6 +127,16 @@ export default class DailyExercise extends Component {
         });
     }
 
+    handleDBSave = (e) => {
+        e.preventDefault();
+        const { firebaseId, activityRecord } = this.state;
+        if (firebaseId && activityRecord) {
+            updateExercises(firebaseId, activityRecord);
+        }
+
+    }
+
+
     saveAndContinue = (e) => {
         e.preventDefault();
         this.props.nextStep();
@@ -152,17 +178,18 @@ export default class DailyExercise extends Component {
         this.setState({ activityRecord });
     }
 
-    removeRow = (e) => {
+    removeRow = async (e) => {
         const deleteMe = e.target.name;
-        this.setState({ activityRecord: this.state.activityRecord.filter(thisRecord => thisRecord.id !== deleteMe) });
+        this.setState({ activityRecord: this.state.activityRecord.filter(thisRecord => thisRecord.id !== deleteMe) })
     }
 
     getGrandTotalKCalBurned = () => {
         const { activityRecord } = this.state;
         let total = 0;
         if (activityRecord.length > 0) {
-            total = activityRecord.map((theActivityRecord) => {
-                return total + theActivityRecord.values.total_kcal_burned;
+            activityRecord.forEach((theActivityRecord) => {
+                const { total_kcal_burned } = theActivityRecord.data();
+                total = total + Number(total_kcal_burned);
             });
         }
         return total;
@@ -170,20 +197,23 @@ export default class DailyExercise extends Component {
 
 
     showRow = (activityRecord) => {
-        const { created, met_category, met_activity_name, met_value, minutes_spent, kcal_burned_per_minute, total_kcal_burned } = activityRecord.values;
-        return (
-            <Table.Row key={activityRecord.id}>
-                <Table.Cell><Button name={activityRecord.id} onClick={this.removeRow}>x</Button></Table.Cell>
-                <Table.Cell>{activityRecord.id}</Table.Cell>
-                <Table.Cell>{Intl.DateTimeFormat('en-US').format(created)}</Table.Cell>
-                <Table.Cell>{met_category}</Table.Cell>
-                <Table.Cell>{met_activity_name}</Table.Cell>
-                <Table.Cell>{met_value}</Table.Cell>
-                <Table.Cell>{minutes_spent}</Table.Cell>
-                <Table.Cell>{kcal_burned_per_minute.toFixed(2)}</Table.Cell>
-                <Table.Cell>{total_kcal_burned.toFixed(2)}</Table.Cell>
-            </Table.Row>
-        )
+        if (activityRecord) {
+            const { created, met_category, met_activity_name, met_value, minutes_spent, kcal_burned_per_minute, total_kcal_burned } = activityRecord.data();
+            return (
+                <Table.Row key={activityRecord.id}>
+                    <Table.Cell><Button name={activityRecord.id} onClick={this.removeRow}>x</Button></Table.Cell>
+                    <Table.Cell>{activityRecord.id}</Table.Cell>
+                    <Table.Cell>{created}</Table.Cell>
+                    <Table.Cell>{met_category}</Table.Cell>
+                    <Table.Cell>{met_activity_name}</Table.Cell>
+                    <Table.Cell>{met_value}</Table.Cell>
+                    <Table.Cell>{minutes_spent}</Table.Cell>
+                    <Table.Cell>{kcal_burned_per_minute}</Table.Cell>
+                    <Table.Cell>{total_kcal_burned}</Table.Cell>
+                </Table.Row>
+            )
+        }
+        return <Table.Row key={'noValue'}></Table.Row>;
     }
 
     showTable = () => {
@@ -204,7 +234,9 @@ export default class DailyExercise extends Component {
                             <Table.HeaderCell>Total KCal Burned</Table.HeaderCell>
                         </Table.Row>
                     </Table.Header>
-                    {activityRecord.map(theActivityRecord => this.showRow(theActivityRecord))}
+                    <Table.Body>
+                        {activityRecord.map(theActivityRecord => this.showRow(theActivityRecord))}
+                    </Table.Body>
                 </Table>
             );
         } else {
@@ -278,7 +310,9 @@ export default class DailyExercise extends Component {
                 <h1 className="ui centered">Which category activity?</h1>
                 <Button onClick={this.back}>Back</Button>
                 <Button onClick={this.addRow}>Enter this activity record</Button>
-                <Button onClick={this.handleSubmit}>Save for later</Button>
+                <Button onClick={this.goGetAllExercise}>Load Exercise Records</Button>
+                <Button onClick={this.handleDBSave}>Save for later</Button>
+                <Button onClick={this.handleSubmit}>Continue</Button>
                 <Button onClick={this.reset}>Reset Values</Button>
                 {console.log(activityRecord)}
                 {this.showTable()}
