@@ -6,49 +6,12 @@ import DailyExercise from './DailyExercise';
 import Confirmation from './Confirmation';
 import Success from './Success';
 import FacebookLogin from '../../components/auth/facebook';
-import { getMemberFromFirebase } from '../firebase';
+import BTuser from '../firebase/BT_User';
 
 class MainForm extends Component {
 
-    constructor(props) {
-        super(props)
-        this.state = this.initialState;
-        (function (d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) return;
-            js = d.createElement(s); js.id = id;
-            js.src = "//connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-
-        window.fbAsyncInit = () => {
-            window.FB.init({
-                appId: '315756568976813',
-                autoLogAppEvents: true,
-                xfbml: true,
-                version: 'v3.0'
-            });
-            window.FB.getLoginStatus(response => {
-                if (response.authResponse) {
-                    this.statusChangeCallback(response);
-                    this.loadUserInfo(response.authResponse.userID);
-                }
-            });
-            window.FB.Event.subscribe('auth.statusChange', response => {
-                if (response.authResponse) {
-                    window.FB.getLoginStatus(response => {
-                        this.statusChangeCallback(response);
-                    })
-                } else {
-                    console.log('[FacebookLogin] User cancelled login or did not fully authorize.');
-                    this.reset();
-                }
-            });
-        };
-    };
-
     initialState = {
-        step: 1,
+        step: 99,
         facebookId: '',
         firstName: '',
         lastName: '',
@@ -61,27 +24,34 @@ class MainForm extends Component {
         isLoggedIn: false,
     };
 
+    constructor(props) {
+        super(props)
+        this.state = this.initialState;
+    };
+
     reset() {
         this.setState(this.initialState);
-    }
+    };
 
-    componentDidMount() {
-    }
+    setFacebookData = (fbData) => {
+        const { accessToken,
+            signedRequest,
+            email,
+            firstName,
+            lastName,
+            facebookId
+        } = fbData;
 
-    statusChangeCallback(response) {
-        if (response.status === 'connected') {
-            this.setState({
-                accessToken: response.authResponse,
-                signedRequest: response.signedRequest,
-                facebookId: response.userID,
-                isLoggedIn: true,
-                step: 1
-            })
-        } else if (response.status === 'not_authorized') {
-            console.log("[FacebookLogin] Person is logged into Facebook but not your app");
-        } else {
-            console.log("[FacebookLogin] Person is not logged into Facebook");
-        }
+        this.setState({
+            step: 1,
+            facebookId: facebookId,
+            firstName,
+            lastName,
+            email,
+            accessToken,
+            signedRequest,
+            isLoggedIn: true
+        });
     }
 
     nextStep = () => {
@@ -98,29 +68,6 @@ class MainForm extends Component {
         })
     };
 
-    loadUserInfo(facebookId) {
-        let getMemberPromise = new Promise((resolve, reject) => {
-            resolve(getMemberFromFirebase(facebookId));
-        });
-
-        getMemberPromise.then(theMember => {
-            if (theMember) {
-                const { firstname, lastname, id, created, updated } = theMember;
-                this.setState({
-                    firstname,
-                    lastname,
-                    facebookId,
-                    id,
-                    created,
-                    updated
-                });
-            }
-        }).catch(error => {
-            console.log(error);
-        });
-        return null;
-    };
-
     handleSelectChange = input => event => {
         console.log('Setting ' + input + ' to ' + event.value);
         this.setState({ [input]: event.value })
@@ -130,27 +77,20 @@ class MainForm extends Component {
         this.setState({ [input]: event.target.value })
     };
 
-    render() {
+    logoutFromFacebook = () => {
+        window.FB.logout();
+        this.setState({ isLoggedIn: false });
+    }
+
+    _renderRoute() {
         const { step } = this.state;
         const { firstName, lastName, email, age, city, country, exerciseType, firebaseId, isLoggedIn } = this.state;
         const values = { firstName, lastName, email, age, city, country, exerciseType, firebaseId, isLoggedIn };
         switch (step) {
             case 99: //Used for testing new components
-                return <DailyExercise
-                    nextStep={this.nextStep}
-                    prevStep={this.prevStep}
-                    handleChange={this.handleChange}
-                    handleSelectChange={this.handleSelectChange}
+                return <BTuser
                     values={values}
-                />
-            case 0:
-                return <FacebookLogin
-                    nextStep={this.nextStep}
-                    handleChange={this.handleChange}
-                    loadUserInfo={this.loadUserInfo}
-                    statusChangeCallback={this.statusChangeCallback}
-                    values={values}
-                />
+                />;
             case 1:
                 if (isLoggedIn) {
                     return <UserDetails
@@ -159,12 +99,8 @@ class MainForm extends Component {
                         handleChange={this.handleChange}
                         values={values}
                     />
-                } else {
-                    this.setState({
-                        step: 0
-                    });
-                    return null;
                 }
+                break;
             case 2:
                 return <MeasurementDetails
                     nextStep={this.nextStep}
@@ -197,9 +133,25 @@ class MainForm extends Component {
             case 6:
                 return <Success />
             default:
-                return 'Nothing here';
-
+                return <h1>WELCOME TO THE BARITRACKER!</h1>
         }
+    }
+
+    render() {
+        const { firstName, lastName, email, age, city, country, exerciseType, firebaseId, isLoggedIn } = this.state;
+        const values = { firstName, lastName, email, age, city, country, exerciseType, firebaseId, isLoggedIn };
+        return <div>
+            <FacebookLogin
+                nextStep={this.nextStep}
+                handleChange={this.handleChange}
+                loadUserInfo={this.loadUserInfo}
+                setFacebookData={this.setFacebookData}
+                statusChangeCallback={this.statusChangeCallback}
+                logoutFromFacebook={this.logoutFromFacebook}
+                values={values}
+                isLoggedIn={isLoggedIn} />
+            {this._renderRoute()}
+        </div>
     }
 }
 

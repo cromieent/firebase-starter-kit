@@ -1,53 +1,86 @@
 import React, { Component } from 'react';
+import FBAPI from './fbapi';
 
 export default class FacebookLogin extends Component {
 
-    handleUnsubscribe = function (response) {
-        console.log('unsubscribed from auth.statusChange event');
-    };
+    constructor(props) {
+        super(props);
+        const FB = new FBAPI();
+        (async () => {
+            await FB.init({
+                appId: '2290549227843086',
+                autoLogAppEvents: true,
+                xfbml: true,
+                version: 'v3.0',
+            });
 
-    componentWillUnmount() {
-        window.FB.Event.unsubscribe('auth.statusChange', this.handleUnsubscribe);
+            //           let authResponse = await FB.getLoginStatus();
+            //           this.props.setFacebookData(authResponse);
+
+
+            /*                     if (authResponse.status === 'unknown') {
+                                  authResponse = await FB.login();
+                                  console.log('The Login operation returned ' + authResponse);
+                              }
+                              const me = await FB.me();
+                              
+                           */
+        })();
+        this.state = {
+            FB,
+            isLoggedIn: (props.values) ? props.values.isLoggedIn : false
+        };
     }
 
-    checkLoginState() {
-        window.FB.getLoginStatus(response => {
-            this.props.statusChangeCallback(response);
-        });
+    login = async () => {
+        const { FB } = this.state;
+        let authResponse = await FB.getLoginStatus();
+        if (authResponse.status === 'unknown') {
+            authResponse = await FB.login();
+        }
+        const me = await FB.me();
+        const { accessToken, signedRequest, userID } = authResponse.authResponse;
+        const fbData = {
+            accessToken: accessToken,
+            signedRequest: signedRequest,
+            facebookId: userID,
+            lastName: me.last_name,
+            firstName: me.first_name,
+            email: me.email,
+            isLoggedIn: true
+        }
+        this.props.setFacebookData(fbData);
     };
 
-    login() {
-        window.FB.login(this.checkLoginState(), {
-            scope: 'public_profile,email'
-        });
-    };
-
-    logout() {
+    logout = () => {
         window.FB.logout();
-        console.log('Logout complete');
+        this.setState({ isLoggedIn: false });
     };
-
-    testAPI() {
-        window.FB.api('/me', function (response) {
-            console.log('[FacebookLoginButton] successful login for: ', response);
-        });
-    }
 
     render() {
-        return (
-            <div>
-                We use Facebook to ensure that you are a part of our group.  Please login to continue:<p />
-                <button className="btn btn-block btn-fb"
-                    onClick={() => this.login()} >
-                    <i className="fa fa-facebook" />
-                    Connect with Facebook
-                </button>
-                <button className="btn btn-block btn-fb"
-                    onClick={() => this.logout()} >
-                    <i className="fa fa-facebook" />
-                    Logout from Facebook
-                </button>
-            </div>
-        );
+        const { isLoggedIn } = this.state;
+        if (!isLoggedIn) {
+            return (
+                <div>
+                    We use Facebook to ensure that you are a part of our group.  Please login to continue:<p />
+                    <button className="btn btn-block btn-fb"
+                        onClick={() => this.login()} >
+                        <i className="fa fa-facebook" />
+                        Connect with Facebook
+                    </button>
+                </div>
+            );
+        } else {
+            return (
+                <div>
+                    <button className="btn btn-block btn-fb"
+                        onClick={() => this.logout()} >
+                        <i className="fa fa-facebook" />
+                        Logout from Facebook
+                    </button>
+                </div>
+            );
+        }
     };
+
 };
